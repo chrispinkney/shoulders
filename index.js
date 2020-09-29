@@ -3,9 +3,19 @@ const fetch = require('node-fetch');
 const { fromUrl } = require('hosted-git-info');
 const chalk = require('chalk');
 const { argv } = require('yargs');
+const winston = require('winston');
 
 const ISSUE_COUNT = 15;
 const MAX_CONCURRENT_REQUESTS = 10;
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  defaultMeta: { service: 'user-service' },
+  transports: [
+    new winston.transports.File({ filename: 'output.log', level: 'info' }),
+  ],
+});
 
 function chunksOfSize(arr, size) {
   return arr.reduce((chunks, el, i) => {
@@ -126,6 +136,30 @@ function labelList(labels) {
         );
       }
       break;
+    } else if (argv.tofile) {
+      logger.info(`\n${chalk.red(p.name)}`);
+      if (p.issues && p.issues.length) {
+        for (const issue of p.issues) {
+          logger.info(`- ${issue.title} ( ${chalk.cyan(issue.html_url)} )`);
+          if (issue.labels && issue.labels.length) {
+            logger.info(
+              `  ${labelList(
+                issue.labels.map(({ name }) => chalk.blue(name)),
+              )}`,
+            );
+          }
+        }
+        if (p.hasAdditionalIssues) {
+          logger.info(
+            chalk.gray(`(Showing only the first ${ISSUE_COUNT} issues)`),
+          );
+        }
+      } else {
+        logger.info(chalk.green('No issues found.'));
+      }
+      if (p.info) {
+        logger.info(chalk.cyan(p.info.bugs()));
+      }
     } else {
       console.log(`\n${chalk.red(p.name)}`);
       if (p.issues && p.issues.length) {
