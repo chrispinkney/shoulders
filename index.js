@@ -8,14 +8,9 @@ const winston = require('winston');
 const ISSUE_COUNT = 15;
 const MAX_CONCURRENT_REQUESTS = 10;
 
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.json(),
-  defaultMeta: { service: 'user-service' },
-  transports: [
-    new winston.transports.File({ filename: 'output.log', level: 'info' }),
-  ],
-});
+const logConfiguration = {
+  transports: [new winston.transports.Console()],
+};
 
 function chunksOfSize(arr, size) {
   return arr.reduce((chunks, el, i) => {
@@ -137,28 +132,45 @@ function labelList(labels) {
       }
       break;
     } else if (argv.tofile) {
-      logger.info(`\n${chalk.red(p.name)}`);
+      const logger = winston.createLogger(logConfiguration);
+      logger.log({
+        repo: `\n${chalk.red(p.name)}`,
+        level: 'info',
+      });
       if (p.issues && p.issues.length) {
         for (const issue of p.issues) {
-          logger.info(`- ${issue.title} ( ${chalk.cyan(issue.html_url)} )`);
+          logger.log({
+            issue_title: `- ${issue.title} ( ${chalk.cyan(issue.html_url)} )`,
+            level: 'info',
+          });
           if (issue.labels && issue.labels.length) {
-            logger.info(
-              `  ${labelList(
+            logger.log({
+              issue_label: `  ${labelList(
                 issue.labels.map(({ name }) => chalk.blue(name)),
               )}`,
-            );
+              level: 'info',
+            });
           }
         }
         if (p.hasAdditionalIssues) {
-          logger.info(
-            chalk.gray(`(Showing only the first ${ISSUE_COUNT} issues)`),
-          );
+          logger.log({
+            issue_count: chalk.gray(
+              `(Showing only the first ${ISSUE_COUNT} issues)`,
+            ),
+            level: 'info',
+          });
         }
       } else {
-        logger.info(chalk.green('No issues found.'));
+        logger.log({
+          none: chalk.green('No issues found.'),
+          level: 'info',
+        });
       }
       if (p.info) {
-        logger.info(chalk.cyan(p.info.bugs()));
+        logger.log({
+          info: chalk.cyan(p.info.bugs()),
+          level: 'info',
+        });
       }
     } else {
       console.log(`\n${chalk.red(p.name)}`);
